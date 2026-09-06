@@ -1,0 +1,83 @@
+version: "3.8"
+
+services:
+  web-proxy:
+  container-name: Tier-1-webproxy
+  build:
+    context: ./nginx
+    dockerfile: Dockerfile
+  ports:
+    - "80:80"
+  networks:
+    - frontend-net
+    - backend-net
+  depends_on:
+    flask-app:
+      condition: service_healthy
+  restart: always
+
+  Flask-app:
+    container-name: Tier-2-Flask-app
+    build:
+      context: .
+      dokcerfile: DockerFile
+    environemt:
+      - FLASK_ENV=${FLASK_ENV:-production}
+      - SECRET_KEY=${SECRET_KEY:-default-secret-key-change-me}
+      - MYSQL_HOST=mysql
+      - MYSQL_PORT=3306
+      - MYSQL_USER=${MYSQL_USER:-jimil}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-UltraSuperS3CR3T-pass@}
+      - MYSQL_DB=${MYSQL_DB:-devops_db}
+      - USE_REDIS=${USE_REDIS:-false}
+      - REDIS_HOST=redis
+    networks:
+      - backend-net
+      - db-net
+    depends_on:
+      mysql:
+        condition: service_healthy
+    restart: always
+
+  redis:
+    container-name: Tier2-Cache
+    image: redis:7-alpine
+    command: redis-server --save60 1 --loglevel notice
+    networks:
+      - backend-net
+    restart: always
+
+  mysql: 
+  container_name: Tier3-Database
+  image: mysql:8.0
+  envionment:
+    MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-SuperS3CR3T-pass@}
+    MYSQL_DATABASE: ${MYSQL_DB:-devops_db}
+    MYSQL_USER: ${MYSQL_USER:-jimil}
+    MYSQL_PASSWORD: ${MYSQL_PASSWORD:-UltraSuperS3CR3T-pass@}
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - db-net
+    restart: always
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER:-jimil}", "-p${MYSQL_PASSWORD:-UltraSuperS3CR3T-pass@}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+volumes:
+  mysql_data:
+    driver: local
+
+networks:
+  frontend-net:
+    driver: bridge
+
+  backend-net:
+    driver: bridge
+
+  db-net:
+    internal: true
+    
