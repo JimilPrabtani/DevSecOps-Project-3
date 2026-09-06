@@ -1,5 +1,5 @@
 # Stage 1: Build & Dependencies
-FROM python:3.9-slim AS builder
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
@@ -10,16 +10,18 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirement.txt .
-RUN pip install --user --no-cache-dir -r requirement.txt
+RUN pip install --upgrade pip --no-cache-dir && \
+    pip install --user --no-cache-dir -r requirement.txt
 
 # Stage 2: Final Production Stage (Hardened Non-Root Container)
-FROM python:3.9-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     default-libmysqlclient-dev \
+    && apt-get upgrade -y \
     && rm -rf /var/lib/apt/lists/*
 
 # Create Non-Root System User for Container Security Hardening

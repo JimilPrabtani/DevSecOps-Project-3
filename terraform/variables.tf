@@ -42,6 +42,12 @@ variable "instance_type" {
   # ✏️ CHANGE THIS to t3.small or t3.medium if you need more performance
 }
 
+variable "secret_name" {
+  description = "Name of the AWS Secrets Manager secret to restrict IAM access"
+  type        = string
+  default     = "devsecops/app-credentials"
+}
+
 variable "ami_id" {
   description = "AMI ID for Ubuntu Server 22.04 LTS in your chosen region"
   type        = string

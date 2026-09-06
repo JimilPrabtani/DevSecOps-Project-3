@@ -30,7 +30,7 @@ resource "aws_iam_policy" "secrets_read_policy" {
           "secretsmanager:GetSecretValue",
           "secretsmanager:DescribeSecret"
         ]
-        Resource = "*"
+        Resource = "arn:aws:secretsmanager:${var.aws_region}:*:secret:${var.secret_name}-*"
       }
     ]
   })
