@@ -1,6 +1,6 @@
 # Trident-DevSecOps
 
-A 3-tier secure web app (guestbook) you can clone and run yourself: Nginx reverse proxy → Flask API → MySQL, all in Docker. Every push is security-scanned, and the AWS infrastructure is defined in Terraform.
+A 3-tier secure web app (guestbook) you can clone and run yourself: Nginx reverse proxy → Flask API → MySQL, all in Docker. Every push is security-scanned, and the AWS infrastructure is defined as code with Terraform.
 
 ```
 Browser → Tier 1: Nginx (rate limit + security headers)
@@ -27,7 +27,7 @@ graph TD
     end
 ```
 
-Security basics: no hardcoded secrets (env vars or AWS Secrets Manager via IAM role), SQLAlchemy parameterized queries, HTML-escaped input + CSP headers, rate limiting at both proxy and app layers, non-root containers.
+Security basics: no hardcoded secrets (env vars or AWS Secrets Manager via IAM role), SQLAlchemy parameterized queries, HTML-escaped input + CSP headers, rate limiting at both proxy and app layers.
 
 Two CI pipelines ship with the repo: **GitHub Actions** (scan-only: Gitleaks, Bandit, pip-audit, Trivy, Checkov) and **Jenkins** (scan + build + deploy + health check).
 
@@ -40,6 +40,59 @@ flowchart LR
     E --> F[5. IaC Audit<br/>Checkov]
     F --> G[6. Deploy 3-Tier App<br/>Docker Compose]
 ```
+
+<details>
+<summary><strong>📐 View Full 3-Tier DevSecOps Architecture & Security Threat Model</strong></summary>
+
+## 1. Network Segmentation & Security Boundary Matrix
+
+| Tier | Component | Network Subnet | Public IP | Exposed Ports | Allowed Ingress |
+| :--- | :--- | :--- | :--- | :--- | :--- |
+| **Tier 1 (Presentation)** | Nginx Reverse Proxy & WAF | `frontend-net` (Public Subnet) | Yes | `80`, `443` | `0.0.0.0/0` (Public HTTP/HTTPS) |
+| **Tier 2 (Application)** | Flask REST API + Gunicorn | `backend-net` (Private App Subnet) | No | `5000` (Internal) | `Tier 1 Web SG` Only |
+| **Tier 2 (Cache)** | Redis In-Memory Store | `backend-net` (Private App Subnet) | No | `6379` (Internal) | `Tier 2 App SG` Only |
+| **Tier 3 (Database)** | MySQL 8.0 Database | `db-net` (Private DB Subnet) | No | `3306` (Internal) | `Tier 2 App SG` Only |
+
+---
+
+## 2. Threat Modeling & Security Control Mitigation
+
+| Threat Vector | Potential Impact | Security Mitigation Implemented |
+| :--- | :--- | :--- |
+| **SQL Injection (SQLi)** | Database extraction or corruption | SQLAlchemy ORM parameterized queries; raw SQL concatenation prohibited. |
+| **Cross-Site Scripting (XSS)** | Session hijacking / script execution | Server-side HTML input sanitization (`html.escape`) + Strict `Content-Security-Policy` header. |
+| **Hardcoded Secret Leakage** | Repository compromise & unauthorized AWS access | Dynamic retrieval via AWS Secrets Manager & IAM Roles; `.gitignore` enforcement + Gitleaks CI/CD scanning. |
+| **Denial of Service (DoS)** | Application downtime | Nginx rate limiting (`10 req/sec`) + `Flask-Limiter` middleware. |
+| **Container Breakout / Privilege Escalation** | Host compromise | Hardened non-root user (`USER appuser`, UID 10001) in Dockerfile; container filesystem hardening. |
+| **Insecure Direct DB Access** | Direct attacker connection to DB | DB port `3306` unexposed to host/public networks; isolated internal network topology. |
+
+---
+
+## 3. DevSecOps CI/CD Pipeline Flow
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Developer
+    participant GitHub as GitHub Repository
+    participant Pipeline as CI/CD DevSecOps Pipeline
+    participant Registry as Container Registry
+    participant Server as 3-Tier Production Server
+
+    Developer->>GitHub: Push Code / Create PR
+    GitHub->>Pipeline: Trigger DevSecOps Workflow
+    Pipeline->>Pipeline: Stage 1: Gitleaks Secret Scan
+    Pipeline->>Pipeline: Stage 2: Bandit & Semgrep SAST Scan
+    Pipeline->>Pipeline: Stage 3: pip-audit Dependency Vulnerability Scan
+    Pipeline->>Pipeline: Stage 4: Docker Image Build
+    Pipeline->>Pipeline: Stage 5: Trivy Container Vulnerability Scan
+    Pipeline->>Pipeline: Stage 6: Checkov IaC Security Audit
+    Pipeline->>Registry: Push Verified & Scanned Image
+    Pipeline->>Server: Deploy 3-Tier Stack via Docker Compose
+    Server->>Pipeline: Return /healthz Readiness Check (200 OK)
+```
+
+</details>
 
 ---
 
@@ -97,7 +150,7 @@ terraform plan   # review, fix any credential/AMI/key-pair errors first
 terraform apply  # type yes, note the ec2_public_ip output
 ```
 
-Before `apply`, edit `terraform/variables.tf`: set `my_ip` to your IP (`https://checkip.amazonaws.com`, as `"x.x.x.x/32"`), `key_pair_name` to your existing key pair, `aws_region` + `ami_id` if outside `us-east-1`.
+Before `apply`, edit `terraform/variables.tf`: set `my_ip` to your IP (`https://checkip.amazonaws.com`, as `"x.x.x.x/32"`), `key_pair_name` to your existing key pair, `aws_region` + `ami_id` if overrides are needed.
 
 Then on the instance:
 
@@ -148,7 +201,7 @@ Notes: scan stages use `|| true` so they report without failing the build; stage
 | `Cannot connect to the Docker daemon` | `sudo systemctl start docker && sudo systemctl enable docker`, then log out/in (or `newgrp docker`) so the `docker` group applies |
 | `Tier-1-webproxy Restarting (1) mkdir() ... Permission denied` | Fixed: proxy no longer runs as `USER nginx`. Rebuild with `docker compose build web-proxy --no-cache` |
 | Jenkins health check red on first run | Normal if MySQL is still starting; the retry loop handles it — check `docker compose ps` |
-| `pip-audit` skipped or fails the run | Deps file is standard `requirements.txt` (detected by the workflow). If the audit exits 1, bump the flagged pins to the reported fix versions and re-run; `container-scan` has `if: always()` so Trivy still runs when the audit is red |
+| `pip-audit` skipped or fails the run | Deps file is standard `requirements.txt` (detected by the workflow). If the audit exits 1, bump the flagged pins to the reported fix versions and re-run; keep actions/cache for faster installs |
 | `terraform apply` fails on AMI/key pair | `ami_id` is region-specific (`variables.tf` lists common ones); `key_pair_name` must already exist in that region |
 
 ## Layout
