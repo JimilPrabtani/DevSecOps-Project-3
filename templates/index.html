@@ -627,7 +627,7 @@
 
             <div class="messages">
                 {% for message in messages %}
-                    <p>{{ message[0] }}</p>
+                    <p>{{ message.message }}</p>
                 {% endfor %}
             </div>
 
@@ -641,35 +641,24 @@
 
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        $(document).ready(function() {
-            $("#messageForm").on("submit", function(event) {
-                event.preventDefault();
-                let messageInput = $("input[name='new_message']");
-                let message = messageInput.val().trim();
-
-                if (message === "") {
-                    alert("Message cannot be empty!");
-                    return;
+        document.getElementById("messageForm").addEventListener("submit", async (event) => {
+            event.preventDefault();
+            const input = document.querySelector("input[name='new_message']");
+            const message = input.value.trim();
+            if (!message) { alert("Message cannot be empty!"); return; }
+            try {
+                const res = await fetch("/submit", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ new_message: message }) });
+                const data = await res.json();
+                if (data.message) {
+                    const box = document.querySelector(".messages");
+                    const p = document.createElement("p");
+                    p.textContent = data.message;
+                    box.appendChild(p);
+                    input.value = "";
+                    box.scrollTop = box.scrollHeight;
                 }
-
-                $.ajax({
-                    url: "/submit",
-                    type: "POST",
-                    data: { new_message: message },
-                    success: function(response) {
-                        if (response && response.message) {
-                            $(".messages").append("<p>" + response.message + "</p>");
-                            messageInput.val("");
-                            $(".messages").scrollTop($(".messages")[0].scrollHeight);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error("AJAX Error:", status, error);
-                    }
-                });
-            });
+            } catch (e) { console.error("Submit failed:", e); }
         });
     </script>
 </body>

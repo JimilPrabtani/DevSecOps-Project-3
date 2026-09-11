@@ -5,4 +5,14 @@ ec2_public_ip = "54.160.57.148"
 iam_instance_profile_name = "devsecops-ec2-instance-profile"
 vpc_id = "vpc-04e3b81514436f9cb"
 web_security_group_id = "sg-0e57989e6b342f511"
+
+MYSQL_HOST=mysql
+MYSQL_PORT=3306
+MYSQL_USER=devops_user
+MYSQL_PASSWORD=SuperSecretSecurePassword123!
+MYSQL_DB=devops_db
+MYSQL_ROOT_PASSWORD=RootSuperSecretPassword456!
+
+
+
 ```

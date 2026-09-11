@@ -45,16 +45,21 @@ def apply_security_headers(response):
     response.headers['X-Content-Type-Options'] = 'nosniff'
     response.headers['X-XSS-Protection'] = '1; mode=block'
     response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
-    response.headers['Content-Security-Policy'] = "default-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com https://code.jquery.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;"
+    response.headers['Content-Security-Policy'] = "default-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;"
     return response
+
+def _save_message(raw):
+    msg_obj = Message(message=html.escape(raw))
+    db.session.add(msg_obj)
+    db.session.commit()
+    return msg_obj
 
 # Routes
 @app.route('/')
 def index():
     try:
         messages = Message.query.order_by(Message.id.asc()).all()
-        messages_tuples = [(m.message,) for m in messages]
-        return render_template('index.html', messages=messages_tuples)
+        return render_template('index.html', messages=messages)
     except Exception as e:
         logger.error(f"Error fetching messages for index: {e}")
         return render_template('index.html', messages=[])
@@ -63,22 +68,14 @@ def index():
 @limiter.limit("10 per minute")
 def submit():
     new_message_raw = request.form.get('new_message', '').strip()
-    
     if not new_message_raw:
         return jsonify({'error': 'Message content cannot be empty'}), 400
-
     if len(new_message_raw) > 500:
         return jsonify({'error': 'Message exceeds maximum length of 500 characters'}), 400
-
-    # Sanitize user input against XSS
-    sanitized_message = html.escape(new_message_raw)
-
     try:
-        msg_obj = Message(message=sanitized_message)
-        db.session.add(msg_obj)
-        db.session.commit()
+        msg_obj = _save_message(new_message_raw)
         logger.info(f"New message created with ID: {msg_obj.id}")
-        return jsonify({'message': sanitized_message, 'status': 'success'}), 201
+        return jsonify({'message': msg_obj.message, 'status': 'success'}), 201
     except Exception as e:
         db.session.rollback()
         logger.error(f"Failed to insert message into database: {e}")
@@ -103,19 +100,12 @@ def get_messages_api():
 def post_message_api():
     data = request.get_json(silent=True) or {}
     new_message_raw = data.get('message', '').strip()
-    
     if not new_message_raw:
         return jsonify({'error': 'JSON payload must contain a non-empty "message" field'}), 400
-
     if len(new_message_raw) > 500:
         return jsonify({'error': 'Message exceeds 500 characters'}), 400
-
-    sanitized_message = html.escape(new_message_raw)
-
     try:
-        msg_obj = Message(message=sanitized_message)
-        db.session.add(msg_obj)
-        db.session.commit()
+        msg_obj = _save_message(new_message_raw)
         return jsonify({'status': 'success', 'data': msg_obj.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
