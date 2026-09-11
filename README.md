@@ -146,7 +146,7 @@ Notes: scan stages use `|| true` so they report without failing the build; stage
 | `Cannot connect to the Docker daemon` | `sudo systemctl start docker && sudo systemctl enable docker`, then log out/in (or `newgrp docker`) so the `docker` group applies |
 | `Tier-1-webproxy Restarting (1) mkdir() ... Permission denied` | Fixed: proxy no longer runs as `USER nginx`. Rebuild with `docker compose build web-proxy --no-cache` |
 | Jenkins health check red on first run | Normal if MySQL is still starting; the retry loop handles it — check `docker compose ps` |
-| `pip-audit` skipped in GitHub Actions | Fixed: deps file is now standard `requirements.txt`, which the workflow detects |
+| `pip-audit` skipped or fails the run | Deps file is standard `requirements.txt` (detected by the workflow). If the audit exits 1, bump the flagged pins to the reported fix versions and re-run; `container-scan` has `if: always()` so Trivy still runs when the audit is red |
 | `terraform apply` fails on AMI/key pair | `ami_id` is region-specific (`variables.tf` lists common ones); `key_pair_name` must already exist in that region |
 
 ## Layout

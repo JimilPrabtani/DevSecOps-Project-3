@@ -114,6 +114,9 @@ jobs:
     name: Container Security Scan (Trivy)
     runs-on: ubuntu-latest
     needs: [sast-scan, dependency-audit]
+    # Run even if the dependency audit fails: a red gate must not silently
+    # cancel the container scan. The failed job still marks the run red.
+    if: always()
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
