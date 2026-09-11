@@ -9,7 +9,7 @@ pipeline {
     stages {
         stage('1. Checkout Repository') {
             steps {
-                git branch: 'main', url: 'https://github.com/JimilPrabtani/DevSecOps-Project.git'
+                git branch: 'main', url: 'https://github.com/JimilPrabtani/DevSecOps-Project-3.git'
             }
         }
 
