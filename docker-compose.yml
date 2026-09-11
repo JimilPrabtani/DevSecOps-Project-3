@@ -1,5 +1,3 @@
-version: "3.8"
-
 services:
   web-proxy:
     container_name: Tier-1-webproxy
@@ -26,7 +24,7 @@ services:
       - SECRET_KEY=${SECRET_KEY:-default-secret-key-change-me}
       - MYSQL_HOST=mysql
       - MYSQL_PORT=3306
-      - MYSQL_USER=${MYSQL_USER:-jimil}
+      - MYSQL_USER=${MYSQL_USER:-devops_user}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-UltraSuperS3CR3T-pass@}
       - MYSQL_DB=${MYSQL_DB:-devops_db}
       - USE_REDIS=${USE_REDIS:-false}
@@ -53,7 +51,7 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-SuperS3CR3T-pass@}
       MYSQL_DATABASE: ${MYSQL_DB:-devops_db}
-      MYSQL_USER: ${MYSQL_USER:-jimil}
+      MYSQL_USER: ${MYSQL_USER:-devops_user}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD:-UltraSuperS3CR3T-pass@}
     volumes:
       - mysql_data:/var/lib/mysql

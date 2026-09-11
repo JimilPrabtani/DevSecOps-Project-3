@@ -9,9 +9,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     pkg-config \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirement.txt .
+COPY requirements.txt .
 RUN pip install --upgrade pip --no-cache-dir && \
-    pip install --user --no-cache-dir -r requirement.txt
+    pip install --user --no-cache-dir -r requirements.txt
 
 # Stage 2: Final Production Stage (Hardened Non-Root Container)
 FROM python:3.12-slim

@@ -1,0 +1,23 @@
+# Never bake secrets, history, or build context bloat into the Flask image
+.env
+.env.local
+*.env
+*.pem
+*.key
+*.crt
+.git/
+.github/
+terraform/
+.gitignore
+diagrams/
+*.md
+*.db
+*.sqlite3
+__pycache__/
+*.py[cod]
+venv/
+.venv/
+instance/
+nginx/
+docker-compose.yml
+Jenkinsfile

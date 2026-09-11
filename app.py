@@ -138,7 +138,7 @@ def metrics():
             'status': 'success',
             'metrics': {
                 'total_messages': msg_count,
-                'app_name': 'devsecops-3tier-flask',
+                'app_name': 'trident-devsecops',
                 'version': '2.0.0'
             }
         }), 200

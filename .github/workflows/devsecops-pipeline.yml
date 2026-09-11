@@ -120,12 +120,12 @@ jobs:
 
       - name: Build Flask Application Image
         run: |
-          docker build -t devsecops-flask-app:latest .
+          docker build -t trident-devsecops-app:latest .
 
       - name: Run Trivy Vulnerability Scanner
         uses: aquasecurity/trivy-action@v0.36.0
         with:
-          image-ref: 'devsecops-flask-app:latest'
+          image-ref: 'trident-devsecops-app:latest'
           format: 'table'
           exit-code: '0'
           ignore-unfixed: false

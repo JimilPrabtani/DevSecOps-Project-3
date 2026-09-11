@@ -2,13 +2,14 @@ pipeline {
     agent any
 
     environment {
-        IMAGE_NAME = 'devsecops-flask-app'
+        IMAGE_NAME = 'trident-devsecops-app'
         BUILD_TAG  = "${BUILD_NUMBER}"
     }
 
     stages {
         stage('1. Checkout Repository') {
             steps {
+                echo 'Checking out the repository...'
                 git branch: 'main', url: 'https://github.com/JimilPrabtani/DevSecOps-Project-3.git'
             }
         }
@@ -17,14 +18,14 @@ pipeline {
             steps {
                 echo 'Running Bandit Static Application Security Testing...'
                 sh 'pip install bandit pip-audit || true'
-                sh 'bandit -r . -x ./venv -ll || true'
+                sh 'bandit -r . -x ./venv,./.venv,./terraform,./.git -ll || true'
             }
         }
 
         stage('3. Dependency Vulnerability Audit') {
             steps {
                 echo 'Auditing Python dependencies...'
-                sh 'pip-audit -r requirement.txt || true'
+                sh 'pip-audit -r requirements.txt || true'
             }
         }
 
@@ -53,8 +54,15 @@ pipeline {
         stage('7. Post-Deployment Health Check') {
             steps {
                 echo 'Verifying Tier 1 & Tier 2 health status...'
-                sh 'sleep 10'
-                sh 'curl -f http://localhost/healthz || exit 1'
+                sh '''
+                    for i in 1 2 3 4 5 6; do
+                      if curl -f http://localhost/healthz; then exit 0; fi
+                      echo "Health check attempt $i/6 failed, retrying in 10s..."
+                      sleep 10
+                    done
+                    echo 'Health check failed after 6 attempts'
+                    exit 1
+                '''
             }
         }
     }
