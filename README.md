@@ -109,7 +109,9 @@ cp .env.example .env   # fill as in step 2
 docker compose up -d --build
 curl -f http://localhost/healthz
 ```
+![Build](assets/build.png)
 
+![container-scan](assets/container.png)
 Tear down everything when done: `cd terraform && terraform destroy`.
 
 ## 5. Run the Jenkins pipeline (on EC2)
